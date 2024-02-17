@@ -1,3 +1,4 @@
+
 import '@georapbox/a-tab-group/dist/a-tab-group.js';
 import '@georapbox/web-share-element/dist/web-share-defined.js';
 import '@georapbox/files-dropzone-element/dist/files-dropzone-defined.js';
@@ -33,6 +34,26 @@ import './custom-clipboard-copy.js';
   const supportedFormatsEl = document.getElementById('supportedFormats');
   let shouldRepeatScan = true;
   let rafId;
+  let BookData = [];
+  let dataa = [];
+
+  function fetchData() {
+    fetch("https://nodei.ssccglpinnacle.com/getship")
+      .then((response) => response.json())
+      .then((responseData) => {
+        BookData.push(...responseData.reverse());
+        console.log(BookData);
+        console.log(BookData[0].value[0].scannedValues[0]);
+      });
+
+    fetch("https://nodei.ssccglpinnacle.com/getApproveDPO")
+      .then((response) => response.json())
+      .then((responseData) => {
+        dataa.push(...responseData.reverse());
+        console.log(dataa)
+      });
+  }
+  fetchData();
 
   if (!('BarcodeDetector' in window)) {
     try {
@@ -131,7 +152,7 @@ import './custom-clipboard-copy.js';
   });
 
   if (Array.isArray(formats) && formats.length > 0) {
-    supportedFormatsEl.textContent = `Supported formats: ${formats.join(', ')}`;
+    supportedFormatsEl.textContent = ``;
   }
 
   const beep = (() => {
@@ -366,7 +387,24 @@ import './custom-clipboard-copy.js';
     return new Promise((resolve, reject) => {
       barcodeDetector.detect(source).then(results => {
         if (Array.isArray(results) && results.length > 0) {
-          resolve(results[0]);
+          var desiredFormats = ['ean_13', 'code_128', 'code_39', 'code_93', 'ean_8'];
+          var barcodeResult = results.find(function(obj) {
+            return desiredFormats.includes(obj.format);
+          });
+
+          if (barcodeResult) {
+            // Find book data based on barcode
+            const book = BookData.find(data => data.barcode === barcodeResult.value);
+            if (book) {
+              // If book data is found, attach it to the barcodeResult
+              barcodeResult.book = book;
+            }
+          } else {
+            reject({ message: 'Barcode format not supported.' });
+          }
+
+          resolve(barcodeResult);
+          console.log(barcodeResult);
         } else {
           reject({
             message: 'Could not detect barcode from provided source.'
